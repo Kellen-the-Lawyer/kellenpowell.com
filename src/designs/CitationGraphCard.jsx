@@ -40,8 +40,8 @@ export function CitationGraphMock() {
     const data = CITATION_GRAPH;
 
     const container = containerRef.current;
-    const width = container.clientWidth || 720;
-    const height = container.clientHeight || 420;
+    let width = container.clientWidth || 720;
+    let height = container.clientHeight || 420;
 
     const svg = d3.select(svgRef.current);
     svg.selectAll('*').remove();
@@ -153,8 +153,8 @@ export function CitationGraphMock() {
       node.attr('transform', (d) => `translate(${d.x},${d.y})`);
     });
 
-    // fit the whole network into the card once it settles
-    const fit = () => {
+    // fit the whole network into the card (re-centers on resize too)
+    const fit = (animate = true) => {
       const xs = nodes.map((n) => n.x), ys = nodes.map((n) => n.y);
       const pad = 28;
       const minX = Math.min(...xs) - pad, maxX = Math.max(...xs) + pad;
@@ -163,12 +163,23 @@ export function CitationGraphMock() {
       const scale = Math.min(width / bw, height / bh, 1.4);
       const tx = width / 2 - scale * (minX + maxX) / 2;
       const ty = height / 2 - scale * (minY + maxY) / 2;
-      svg.transition().duration(600).call(zoom.transform, d3.zoomIdentity.translate(tx, ty).scale(scale));
+      const t = d3.zoomIdentity.translate(tx, ty).scale(scale);
+      (animate ? svg.transition().duration(600) : svg).call(zoom.transform, t);
     };
-    sim.on('end', fit);
-    const fitTimer = setTimeout(fit, 3200); // backstop if 'end' is slow
+    sim.on('end', () => fit(true));
+    const fitTimer = setTimeout(() => fit(true), 3200); // backstop if 'end' is slow
 
-    return () => { sim.stop(); clearTimeout(fitTimer); };
+    // keep the graph centred in the box when the card resizes (responsive)
+    const ro = new ResizeObserver(() => {
+      const w = container.clientWidth, h = container.clientHeight;
+      if (!w || !h || (w === width && h === height)) return;
+      width = w; height = h;
+      svg.attr('width', width).attr('height', height);
+      fit(false);
+    });
+    ro.observe(container);
+
+    return () => { sim.stop(); clearTimeout(fitTimer); ro.disconnect(); };
   }, [d3Ready]);
 
   const tierBadge = (n) => (n.tier === 'primary'

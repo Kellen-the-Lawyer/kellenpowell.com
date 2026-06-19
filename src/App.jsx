@@ -1,453 +1,837 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Building2,
+  Search,
   Scale,
+  Network,
+  BarChart3,
+  FileSearch,
   BookOpen,
-  Mail,
-  Linkedin,
-
-  FileText,
-  User,
-  Globe,
-  TrendingUp,
-  MessageSquare,
+  Library,
+  CalendarRange,
+  FolderKanban,
+  Layers,
   ArrowRight,
-  ArrowLeft,
-  ArrowUp,
-  ChevronDown,
+  Check,
+  X,
+  Sparkles,
+  Gavel,
+  Database,
   Menu,
-  X
+  ShieldCheck,
 } from 'lucide-react';
 
-function App() {
-  const [activeSection, setActiveSection] = useState('home');
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+const CASEBASE_URL = 'https://casebase.kellenpowell.com';
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Hooks
+   ───────────────────────────────────────────────────────────────────────── */
+
+// Adds `.in` to the element (and reports state) the first time it scrolls in.
+function useInView(options = { threshold: 0.25 }) {
+  const ref = useRef(null);
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          el.classList.add('in');
+          setInView(true);
+          obs.unobserve(el);
+        }
+      },
+      options
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return [ref, inView];
+}
+
+// Counts up to `target` once `active` is true.
+function useCountUp(target, active, duration = 1400) {
+  const [val, setVal] = useState(0);
+  useEffect(() => {
+    if (!active) return;
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(target * eased);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [active, target, duration]);
+  return val;
+}
+
+function Reveal({ children, className = '', delay = 0 }) {
+  const [ref] = useInView();
+  return (
+    <div ref={ref} className={`reveal ${className}`} style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Shared chrome
+   ───────────────────────────────────────────────────────────────────────── */
+
+function Logo({ size = 'base' }) {
+  const text = size === 'lg' ? 'text-2xl' : 'text-lg';
+  return (
+    <div className="flex items-center gap-2.5 select-none">
+      <span className="w-2 h-2 rounded-full bg-amber animate-pulse-dot" />
+      <span className={`${text} font-serif text-fg tracking-tight`}>Casebase</span>
+    </div>
+  );
+}
+
+function WindowChrome({ label }) {
+  return (
+    <div className="flex items-center gap-2 px-4 h-9 border-b border-line bg-ink-2/80 flex-shrink-0">
+      <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]/70" />
+      <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]/70" />
+      <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]/70" />
+      {label && (
+        <span className="ml-3 text-[11px] font-mono text-fg-3 tracking-wide truncate">{label}</span>
+      )}
+    </div>
+  );
+}
+
+const OUTCOME = {
+  Affirmed: { dot: '#34d399', text: 'text-brand-green' },
+  Reversed: { dot: '#f87171', text: 'text-brand-red' },
+  Remanded: { dot: '#fbbf24', text: 'text-amber-2' },
+};
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Mockup: cross-corpus "Search All"
+   ───────────────────────────────────────────────────────────────────────── */
+
+const SEARCH_RESULTS = [
+  { num: '2023-PER-00148', corpus: 'BALCA', accent: 'text-amber', title: 'Specialty occupation degree requirement', outcome: 'Affirmed' },
+  { num: 'JAN032024_01B5203', corpus: 'AAO', accent: 'text-brand-blue', title: 'EB-1A extraordinary ability — final merits', outcome: 'Reversed' },
+  { num: '20 CFR § 656.17', corpus: 'CFR', accent: 'text-brand-green', title: 'Recruitment & filing requirements', outcome: null },
+  { num: '2022-PER-00091', corpus: 'BALCA', accent: 'text-amber', title: 'Business necessity for foreign language', outcome: 'Remanded' },
+];
+
+function SearchMock({ compact = false }) {
+  const [ref, inView] = useInView({ threshold: 0.4 });
+  const full = 'specialty occupation degree';
+  const [typed, setTyped] = useState('');
+
+  useEffect(() => {
+    if (!inView) return;
+    let i = 0;
+    const id = setInterval(() => {
+      i += 1;
+      setTyped(full.slice(0, i));
+      if (i >= full.length) clearInterval(id);
+    }, 55);
+    return () => clearInterval(id);
+  }, [inView]);
 
   return (
-    <div className="min-h-screen font-sans selection:bg-teal-100 selection:text-teal-900">
-      {/* Navigation */}
-      <nav className="fixed w-full z-50 bg-white/90 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <a href="#" className="text-xl font-bold tracking-tight text-slate-900">KP.</a>
-
-          <div className="hidden md:flex gap-8 text-sm font-medium text-slate-600">
-            <a href="#about" className="hover:text-teal-700 transition-colors">About</a>
-            <a href="#expertise" className="hover:text-teal-700 transition-colors">Expertise</a>
-            <a href="#community" className="hover:text-teal-700 transition-colors">Community Contributions</a>
-          </div>
-
-          <a
-            href="mailto:kellen@kellenpowell.com"
-            className="hidden md:block px-4 py-2 text-xs font-semibold bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all transform hover:scale-[1.02] shadow-sm"
-          >
-            Get in Touch
-          </a>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2 text-slate-600 hover:text-teal-700 transition-colors"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+    <div
+      ref={ref}
+      className="rounded-xl border border-line-2 bg-ink-2 overflow-hidden shadow-2xl shadow-black/60"
+    >
+      <WindowChrome label="casebase.kellenpowell.com" />
+      <div className="p-4">
+        {/* search field */}
+        <div className="flex items-center gap-2 h-10 px-3 rounded-full border border-line-2 bg-ink-3">
+          <Search size={14} className="text-fg-3 flex-shrink-0" />
+          <span className="text-[13px] text-fg-2 font-sans">
+            {typed}
+            {inView && typed.length < full.length && <span className="caret text-amber">|</span>}
+          </span>
+          <span className="ml-auto text-[10px] font-mono text-fg-3 px-2 py-0.5 rounded bg-ink-4 border border-line">
+            Search all
+          </span>
         </div>
 
-        {/* Mobile Menu Overlay */}
-        {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-16 left-0 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xl p-4 flex flex-col gap-4 animate-fade-in-down">
-            <a
-              href="#about"
-              className="text-lg font-medium text-slate-700 hover:text-teal-700 py-2 border-b border-slate-100"
-              onClick={() => setIsMobileMenuOpen(false)}
+        {/* results */}
+        <div className="mt-3 space-y-1.5">
+          {SEARCH_RESULTS.slice(0, compact ? 3 : 4).map((r, i) => (
+            <div
+              key={r.num}
+              className="flex items-start gap-3 px-3 py-2.5 rounded-lg border border-transparent hover:border-line bg-ink-3/40"
+              style={
+                inView
+                  ? { animation: `row-in 0.5s ease forwards`, animationDelay: `${900 + i * 220}ms`, opacity: 0 }
+                  : { opacity: 0 }
+              }
             >
-              About
-            </a>
-            <a
-              href="#expertise"
-              className="text-lg font-medium text-slate-700 hover:text-teal-700 py-2 border-b border-slate-100"
-              onClick={() => setIsMobileMenuOpen(false)}
+              <span className={`font-mono text-[11px] ${r.accent} pt-0.5 w-[120px] flex-shrink-0 truncate`}>
+                {r.num}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[13px] text-fg leading-snug truncate">{r.title}</div>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-fg-3 px-1.5 py-0.5 rounded bg-ink-4">
+                    {r.corpus}
+                  </span>
+                  {r.outcome && (
+                    <span className={`text-[10px] flex items-center gap-1 ${OUTCOME[r.outcome].text}`}>
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ background: OUTCOME[r.outcome].dot }} />
+                      {r.outcome}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Mockup: citation graph
+   ───────────────────────────────────────────────────────────────────────── */
+
+const G_NODES = [
+  { id: 0, x: 200, y: 150, r: 17, c: '#f59e0b', primary: true },
+  { id: 1, x: 95, y: 80, r: 11, c: '#34d399' },
+  { id: 2, x: 320, y: 90, r: 13, c: '#f87171' },
+  { id: 3, x: 110, y: 220, r: 10, c: '#fbbf24' },
+  { id: 4, x: 305, y: 215, r: 12, c: '#34d399' },
+  { id: 5, x: 40, y: 150, r: 8, c: '#5a5a68' },
+  { id: 6, x: 360, y: 155, r: 8, c: '#5a5a68' },
+  { id: 7, x: 200, y: 40, r: 9, c: '#60a5fa' },
+  { id: 8, x: 205, y: 262, r: 8, c: '#5a5a68' },
+];
+const G_EDGES = [
+  [0, 1], [0, 2], [0, 3], [0, 4], [0, 7], [1, 5], [2, 6], [3, 8], [4, 6], [2, 7],
+];
+
+function CitationGraphMock() {
+  const [ref, inView] = useInView({ threshold: 0.4 });
+  const len = (a, b) => Math.hypot(G_NODES[a].x - G_NODES[b].x, G_NODES[a].y - G_NODES[b].y);
+
+  return (
+    <div ref={ref} className="rounded-xl border border-line-2 bg-ink-2 overflow-hidden shadow-2xl shadow-black/60">
+      <WindowChrome label="Citation Graph — 'ability to pay'" />
+      <div className="relative">
+        <svg viewBox="0 0 400 300" className="w-full h-auto block">
+          <defs>
+            <marker id="arrow" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0,0 L6,3 L0,6" fill="#3a3a3f" />
+            </marker>
+          </defs>
+          {G_EDGES.map(([a, b], i) => {
+            const l = len(a, b);
+            return (
+              <line
+                key={i}
+                x1={G_NODES[a].x}
+                y1={G_NODES[a].y}
+                x2={G_NODES[b].x}
+                y2={G_NODES[b].y}
+                stroke="#3a3a3f"
+                strokeWidth="1.2"
+                markerEnd="url(#arrow)"
+                style={
+                  inView
+                    ? {
+                        strokeDasharray: l,
+                        '--len': l,
+                        animation: `draw-edge 0.8s ease forwards`,
+                        animationDelay: `${400 + i * 90}ms`,
+                        strokeDashoffset: l,
+                      }
+                    : { strokeDasharray: l, strokeDashoffset: l }
+                }
+              />
+            );
+          })}
+          {G_NODES.map((n, i) => (
+            <g
+              key={n.id}
+              style={
+                inView
+                  ? { transformOrigin: `${n.x}px ${n.y}px`, animation: `node-pop 0.5s cubic-bezier(.34,1.56,.64,1) forwards`, animationDelay: `${i * 110}ms`, opacity: 0 }
+                  : { opacity: 0 }
+              }
             >
-              Expertise
-            </a>
-            <a
-              href="#community"
-              className="text-lg font-medium text-slate-700 hover:text-teal-700 py-2 border-b border-slate-100"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Community Contributions
-            </a>
-            <a
-              href="mailto:kellen@kellenpowell.com"
-              className="text-center w-full px-4 py-3 font-semibold bg-slate-900 text-white rounded-md hover:bg-slate-800 transition-all shadow-sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              Get in Touch
-            </a>
+              <circle
+                cx={n.x}
+                cy={n.y}
+                r={n.r}
+                fill={n.primary ? n.c : `${n.c}cc`}
+                stroke={n.primary ? '#fff' : n.c}
+                strokeWidth={n.primary ? 2 : 1}
+              />
+              {n.primary && <circle cx={n.x} cy={n.y} r={n.r + 6} fill="none" stroke={n.c} strokeWidth="1" opacity="0.4" />}
+            </g>
+          ))}
+        </svg>
+        {/* legend */}
+        <div className="absolute bottom-3 left-3 flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-mono text-fg-3">
+          {[['#34d399', 'Affirmed'], ['#f87171', 'Reversed'], ['#fbbf24', 'Remanded']].map(([c, l]) => (
+            <span key={l} className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: c }} />
+              {l}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Mockup: DOL data dashboard
+   ───────────────────────────────────────────────────────────────────────── */
+
+const BARS = [42, 61, 55, 78, 70, 88, 95];
+
+function DashboardMock() {
+  const [ref, inView] = useInView({ threshold: 0.4 });
+  const perm = useCountUp(486231, inView);
+  const lca = useCountUp(912004, inView);
+  const cert = useCountUp(94.2, inView, 1600);
+
+  // donut
+  const R = 26;
+  const CIRC = 2 * Math.PI * R;
+
+  return (
+    <div ref={ref} className="rounded-xl border border-line-2 bg-ink-2 overflow-hidden shadow-2xl shadow-black/60">
+      <WindowChrome label="Dashboards — DOL Performance Data" />
+      <div className="p-5">
+        {/* KPI row */}
+        <div className="grid grid-cols-3 gap-3 mb-5">
+          {[
+            { label: 'PERM Filings', val: Math.round(perm).toLocaleString(), c: 'text-amber' },
+            { label: 'LCA Filings', val: Math.round(lca).toLocaleString(), c: 'text-brand-blue' },
+            { label: 'PERM Cert Rate', val: `${cert.toFixed(1)}%`, c: 'text-brand-green' },
+          ].map((k) => (
+            <div key={k.label} className="rounded-lg border border-line bg-ink-3 px-3 py-3">
+              <div className={`font-mono text-base font-medium ${k.c}`}>{k.val}</div>
+              <div className="text-[9px] uppercase tracking-wider text-fg-3 mt-1">{k.label}</div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto] gap-5 items-end">
+          {/* bar chart */}
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-fg-3 mb-2">Filings by FY</div>
+            <div className="flex items-end gap-2 h-28">
+              {BARS.map((h, i) => (
+                <div key={i} className="flex-1 flex flex-col items-center gap-1">
+                  <div
+                    className="w-full rounded-t bg-gradient-to-t from-amber/40 to-amber"
+                    style={{
+                      height: `${h}%`,
+                      transformOrigin: 'bottom',
+                      animation: inView ? `grow-bar 0.7s cubic-bezier(.22,1,.36,1) forwards` : 'none',
+                      animationDelay: `${i * 80}ms`,
+                      transform: inView ? undefined : 'scaleY(0)',
+                    }}
+                  />
+                  <span className="text-[8px] font-mono text-fg-3">{2020 + i}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-      </nav>
 
-      {/* Hero Section */}
-      <section id="home" className="min-h-screen flex items-center pt-24 pb-0 px-4 bg-slate-800 overflow-hidden relative">
-        <div className="max-w-6xl mx-auto w-full grid md:grid-cols-2 gap-12 items-center h-full">
+          {/* donut */}
+          <div className="flex flex-col items-center">
+            <svg width="78" height="78" viewBox="0 0 78 78">
+              <circle cx="39" cy="39" r={R} fill="none" stroke="#2a2a2e" strokeWidth="7" />
+              <circle
+                cx="39"
+                cy="39"
+                r={R}
+                fill="none"
+                stroke="#34d399"
+                strokeWidth="7"
+                strokeLinecap="round"
+                transform="rotate(-90 39 39)"
+                strokeDasharray={CIRC}
+                style={{
+                  strokeDashoffset: inView ? CIRC * (1 - 0.942) : CIRC,
+                  transition: 'stroke-dashoffset 1.6s cubic-bezier(.22,1,.36,1)',
+                }}
+              />
+              <text x="39" y="43" textAnchor="middle" className="fill-fg font-mono" fontSize="13">
+                94%
+              </text>
+            </svg>
+            <span className="text-[9px] uppercase tracking-wider text-fg-3 mt-1">Cert rate</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          {/* Text Content */}
-          <div className="space-y-8 animate-fade-in-up text-center md:text-left order-2 md:order-1 pb-16 md:pb-0">
-            <div className="inline-block p-1 rounded-full bg-slate-700/50 mb-4 border border-slate-600">
-              <span className="px-3 py-1 text-xs font-medium text-slate-300 uppercase tracking-widest">
-                Immigration Attorney
+/* ─────────────────────────────────────────────────────────────────────────
+   Mockup: PERM Comparer (PWD vs experience letter)
+   ───────────────────────────────────────────────────────────────────────── */
+
+const REQS = [
+  { kw: 'Master’s degree', ok: true },
+  { kw: 'Python', ok: true },
+  { kw: 'Machine learning', ok: true },
+  { kw: 'Apache Spark', ok: false },
+  { kw: '36 months exp.', ok: true },
+];
+
+function ComparerMock() {
+  const [ref, inView] = useInView({ threshold: 0.4 });
+  const months = useCountUp(44, inView, 1200);
+
+  return (
+    <div ref={ref} className="rounded-xl border border-line-2 bg-ink-2 overflow-hidden shadow-2xl shadow-black/60">
+      <WindowChrome label="PERM Comparer — Verify Experience" />
+      <div className="p-5">
+        <div className="grid grid-cols-2 gap-4">
+          {/* PWD requirements */}
+          <div className="rounded-lg border border-line bg-ink-3 p-3">
+            <div className="text-[9px] uppercase tracking-wider text-fg-3 mb-2">PWD Minimum Requirements</div>
+            <p className="text-[11px] leading-relaxed text-fg-2">
+              Employer requires a{' '}
+              <mark className="bg-amber/20 text-amber-2 rounded px-0.5">Master’s degree</mark> plus{' '}
+              <mark className="bg-amber/20 text-amber-2 rounded px-0.5">36 months</mark> of experience using{' '}
+              <mark className="bg-amber/20 text-amber-2 rounded px-0.5">Python</mark>,{' '}
+              <mark className="bg-amber/20 text-amber-2 rounded px-0.5">machine learning</mark>, and{' '}
+              <mark className="bg-amber/20 text-amber-2 rounded px-0.5">Apache Spark</mark>.
+            </p>
+          </div>
+          {/* Letter */}
+          <div className="rounded-lg border border-line bg-ink-3 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-[9px] uppercase tracking-wider text-fg-3">Experience Letter</div>
+              <span className="text-[10px] font-mono text-amber px-2 py-0.5 rounded-full bg-amber/15 border border-amber/30">
+                {Math.round(months)} mo
               </span>
             </div>
-
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight text-white">
-              Kellen Powell
-            </h1>
-
-            <p className="text-xl md:text-2xl text-slate-300 font-light max-w-lg mx-auto md:mx-0">
-              Veteran. Advocate. Strategist.<br />
-              Navigating the intersection of <span className="text-white font-normal border-b-2 border-teal-500">immigration law</span> and <span className="text-white font-normal border-b-2 border-teal-500">global talent</span>.
+            <p className="text-[11px] leading-relaxed text-fg-2">
+              Acme Corp. — Senior Data Scientist, Jan 2021 – Aug 2024. Built ML pipelines in Python; led model
+              development and deployment.
             </p>
-
-
-          </div>
-
-          {/* Image Content */}
-          <div className="relative order-1 md:order-2 flex justify-center md:justify-end h-full items-end mt-8 md:mt-0">
-            <div className="relative z-10 w-full max-w-lg flex items-end justify-center md:justify-end">
-              {/* Subtle backlight */}
-              <div className="absolute bottom-0 right-10 w-96 h-96 bg-slate-700/30 rounded-full blur-3xl -z-10"></div>
-
-              <img
-                src="/images/gemini_generated.png"
-                alt="Kellen Powell"
-                className="relative z-10 w-full h-auto object-contain drop-shadow-2xl"
-              />
-            </div>
-          </div>
-
-        </div>
-
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce opacity-50 text-slate-500 hidden md:block z-20">
-          <ChevronDown size={24} />
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-16 md:py-24 px-4 bg-slate-50 border-t border-slate-200">
-        <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-16 items-center">
-          <div className="order-2 md:order-1 relative">
-            <div className="relative z-10 p-8 rounded-2xl bg-white border border-slate-200 shadow-xl">
-              <h3 className="text-2xl font-bold text-slate-900 mb-4">More than just legal counsel.</h3>
-              <p className="text-slate-600 leading-relaxed mb-6">
-                With over a decade of experience in employment-based immigration, I bridge the gap between complex regulations and business goals.
-              </p>
-              <p className="text-slate-600 leading-relaxed">
-                As a 10-year Army Veteran, I bring disciplined strategy to every case. My approach is direct, data-driven, and relentlessly focused on the client's objective.
-              </p>
-            </div>
-            {/* Abstract decorative element */}
-            <div className="absolute top-4 -right-4 w-full h-full bg-slate-200/50 rounded-2xl -z-0"></div>
-          </div>
-
-          <div className="order-1 md:order-2 space-y-6">
-            <span className="text-teal-700 font-medium tracking-widest text-sm uppercase">About Me</span>
-            <h2 className="text-4xl font-bold text-slate-900">
-              A modern advocate for the modern workforce.
-            </h2>
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                  <User size={20} />
-                </div>
-                <div>
-                  <h4 className="text-slate-900 font-medium">Practiced Attorney</h4>
-                  <p className="text-sm text-slate-500">10+ Years Experience</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                  <Building2 size={20} />
-                </div>
-                <div>
-                  <h4 className="text-slate-900 font-medium">Employment Immigration</h4>
-                  <p className="text-sm text-slate-500">PERM, H-1B, L-1, O-1</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
-                  <Globe size={20} />
-                </div>
-                <div>
-                  <h4 className="text-slate-900 font-medium">Global Perspective</h4>
-                  <p className="text-sm text-slate-500">Connecting talent worldwide</p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </section>
 
-      {/* Expertise Section */}
-      <section id="expertise" className="pt-24 pb-16 md:py-24 px-4 bg-slate-900 md:bg-white relative overflow-hidden md:overflow-visible [clip-path:polygon(0_40px,100%_0,100%_100%,0_100%)] md:[clip-path:none]">
-        {/* Decorative background shapes for mobile */}
-        <div className="md:hidden absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl"></div>
-        <div className="md:hidden absolute bottom-0 left-0 w-64 h-64 bg-teal-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl"></div>
-        <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-16 items-start">
-          {/* Left Column: Header & Feature Image */}
-          <div className="space-y-8 md:sticky md:top-24 relative z-0 md:z-auto">
-            <div className="relative z-10">
-              <span className="text-teal-400 md:text-slate-500 font-medium tracking-widest text-sm uppercase">Legal Services</span>
-              <h2 className="text-4xl font-bold text-white md:text-slate-900 mt-2 max-w-sm">Core Areas of Focus</h2>
-              <p className="text-slate-300 md:text-slate-600 mt-4 leading-relaxed max-w-md">
-                My practice is built on deep specialization. From high-growth startups to established corporations, I provide the strategic counsel needed to navigate the complexities of U.S. immigration.
-              </p>
-            </div>
-
-            <div className="relative group hidden md:block">
-              <div className="absolute -inset-1 bg-gradient-to-r from-teal-600 to-slate-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-              <img
-                src="/images/strategy_meeting.jpg"
-                alt="Strategic Planning Meeting"
-                className="relative rounded-2xl shadow-xl w-full h-auto object-cover border border-slate-100"
-              />
-            </div>
+        {/* keyword pills */}
+        <div className="mt-4">
+          <div className="text-[9px] uppercase tracking-wider text-fg-3 mb-2">
+            Requirement keywords — 4 of 5 found in letter
           </div>
-
-          {/* Right Column: Service Grid */}
-          <div className="grid sm:grid-cols-2 gap-6">
-            <Card
-              icon={<TrendingUp size={24} />}
-              title="Advanced Strategies"
-              desc="Complex case consulting, long-term immigration planning, and alternative visa pathways for unique talent."
-            />
-            <Card
-              icon={<FileText size={24} />}
-              title="PERM Certification"
-              desc="Strategic guidance through the Department of Labor's complex permanent residency process."
-            />
-            <Card
-              icon={<Building2 size={24} />}
-              title="Non-Immigrant Visas"
-              desc="Expert handling of H-1B, L-1, TN, and O-1 petitions for corporate clients and skilled professionals."
-            />
-            <Card
-              icon={<Scale size={24} />}
-              title="Audit & Compliance"
-              desc="Defensive strategy for DOL audits and maintaining rigorous compliance files to protect employer interests."
-            />
+          <div className="flex flex-wrap gap-2">
+            {REQS.map((r, i) => (
+              <span
+                key={r.kw}
+                className={`flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border font-medium ${
+                  r.ok
+                    ? 'text-brand-green border-brand-green/40 bg-brand-green/10'
+                    : 'text-brand-red border-brand-red/40 bg-brand-red/10'
+                }`}
+                style={
+                  inView
+                    ? { animation: `pill-flip 0.4s ease forwards`, animationDelay: `${700 + i * 160}ms`, opacity: 0 }
+                    : { opacity: 0 }
+                }
+              >
+                {r.ok ? <Check size={12} /> : <X size={12} />}
+                {r.kw}
+              </span>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
+    </div>
+  );
+}
 
-      {/* Community Engagement / Reddit Section */}
-      <section id="community" className="py-16 md:py-24 px-4 bg-slate-50 border-y border-slate-200">
-        <div className="max-w-4xl mx-auto text-center space-y-4 mb-12">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-semibold uppercase tracking-wider mb-4">
-            <MessageSquare size={14} />
-            Community Contributor
+/* ─────────────────────────────────────────────────────────────────────────
+   Page sections
+   ───────────────────────────────────────────────────────────────────────── */
+
+function Nav() {
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener('scroll', onScroll);
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const links = [
+    ['Research', '#research'],
+    ['Data', '#data'],
+    ['Tools', '#tools'],
+    ['Everything', '#everything'],
+  ];
+
+  return (
+    <nav
+      className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${
+        scrolled ? 'bg-ink/85 backdrop-blur-md border-b border-line' : 'border-b border-transparent'
+      }`}
+    >
+      <div className="max-w-6xl mx-auto px-5 md:px-8 h-16 flex items-center justify-between">
+        <a href="#top"><Logo /></a>
+        <div className="hidden md:flex items-center gap-8 text-[13px] text-fg-3">
+          {links.map(([l, h]) => (
+            <a key={h} href={h} className="hover:text-fg transition-colors">{l}</a>
+          ))}
+        </div>
+        <a
+          href={CASEBASE_URL}
+          className="hidden md:inline-flex items-center gap-1.5 px-4 py-2 text-[13px] font-semibold rounded-md bg-amber text-ink hover:bg-amber-2 transition-colors"
+        >
+          Open Casebase <ArrowRight size={15} />
+        </a>
+        <button className="md:hidden text-fg-2 p-2" onClick={() => setOpen((o) => !o)} aria-label="Menu">
+          {open ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+      {open && (
+        <div className="md:hidden bg-ink-2 border-b border-line px-5 py-4 flex flex-col gap-1">
+          {links.map(([l, h]) => (
+            <a key={h} href={h} onClick={() => setOpen(false)} className="py-2.5 text-fg-2 border-b border-line/60">
+              {l}
+            </a>
+          ))}
+          <a
+            href={CASEBASE_URL}
+            className="mt-3 text-center px-4 py-3 font-semibold rounded-md bg-amber text-ink"
+          >
+            Open Casebase
+          </a>
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function Hero() {
+  return (
+    <section id="top" className="relative pt-32 pb-20 md:pt-40 md:pb-28 px-5 overflow-hidden">
+      <div className="absolute inset-0 grid-bg opacity-60" />
+      <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-amber/10 rounded-full blur-[140px] animate-glow pointer-events-none" />
+      <div className="relative max-w-6xl mx-auto grid lg:grid-cols-2 gap-14 items-center">
+        <div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-line bg-ink-2 text-[11px] text-fg-2 mb-7">
+            <Sparkles size={13} className="text-amber" />
+            Immigration research, reimagined
           </div>
-          <h2 className="text-3xl md:text-4xl font-bold text-slate-900">Direct Answers. Real Impact.</h2>
-          <p className="text-xl text-slate-600 max-w-2xl mx-auto">
-            I believe in democratizing legal knowledge. I'm an active contributor to <span className="text-slate-900 font-medium">r/immigration</span>, helping real people navigate complex hurdles.
+          <h1 className="font-serif text-[2.7rem] leading-[1.05] md:text-6xl md:leading-[1.04] text-fg tracking-tight">
+            Every PERM decision,
+            <br />
+            <span className="text-amber">one search box.</span>
+          </h1>
+          <p className="mt-6 text-lg text-fg-2 leading-relaxed max-w-xl">
+            Casebase is a research and analytics workbench for employment-based immigration. Search BALCA and AAO
+            case law, the CFR, and USCIS policy together — then back it with 1.4M+ records of DOL outcome data.
+          </p>
+          <div className="mt-9 flex flex-col sm:flex-row gap-3">
+            <a
+              href={CASEBASE_URL}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg bg-amber text-ink font-semibold hover:bg-amber-2 transition-colors"
+            >
+              Open Casebase <ArrowRight size={18} />
+            </a>
+            <a
+              href="#research"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-lg border border-line-2 bg-ink-2 text-fg-2 font-medium hover:border-fg-3 hover:text-fg transition-colors"
+            >
+              See it in action
+            </a>
+          </div>
+          <p className="mt-4 text-[13px] text-fg-3 flex items-center gap-1.5">
+            <ShieldCheck size={14} className="text-brand-green" />
+            Free to use — no account, no sign-up.
           </p>
         </div>
 
-        <div className="max-w-3xl mx-auto">
-          <RedditCarousel />
+        <div className="relative animate-float-slow">
+          <SearchMock />
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* Footer */}
-      <footer id="contact" className="py-12 bg-white border-t border-slate-100">
-        <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-8">
-          <div>
-            <span className="text-2xl font-bold text-slate-900">KP.</span>
-            <p className="text-slate-500 text-sm mt-2">© {new Date().getFullYear()} Kellen Powell. All rights reserved.</p>
-          </div>
+const STATS = [
+  { target: 1.4, suffix: 'M+', label: 'DOL disclosure records', mono: '1.4M+' },
+  { target: 7334, suffix: '', label: 'BALCA decisions indexed', mono: '7,334' },
+  { target: 6, suffix: '', label: 'searchable corpora', mono: '6' },
+  { target: 21, suffix: '', label: 'pre-built report templates', mono: '21' },
+];
 
-          <div className="flex gap-6">
-            <SocialLink href="https://www.linkedin.com/in/kellen-powell-immigration" icon={<Linkedin size={20} />} label="LinkedIn" />
-            <SocialLink href="https://www.reddit.com/user/kellen-the-lawyer/" icon={<RedditIcon size={20} />} label="Reddit" />
-            <SocialLink href="mailto:kellen@kellenpowell.com" icon={<Mail size={20} />} label="Email" />
-          </div>
-        </div>
-      </footer>
+function StatsBand() {
+  const [ref, inView] = useInView({ threshold: 0.5 });
+  return (
+    <section className="border-y border-line bg-ink-2/50">
+      <div ref={ref} className="max-w-6xl mx-auto px-5 md:px-8 py-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+        {STATS.map((s, i) => (
+          <StatItem key={s.label} stat={s} active={inView} delay={i * 120} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function StatItem({ stat, active }) {
+  const val = useCountUp(stat.target, active, 1500);
+  const display =
+    stat.suffix === 'M+'
+      ? `${val.toFixed(1)}M+`
+      : `${Math.round(val).toLocaleString()}${stat.suffix}`;
+  return (
+    <div className="text-center md:text-left">
+      <div className="font-mono text-3xl md:text-4xl text-amber">{active ? display : '0'}</div>
+      <div className="text-[13px] text-fg-3 mt-2">{stat.label}</div>
     </div>
   );
 }
 
-// Sub-components
-function RedditCarousel() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  const comments = [
-    {
-      topic: "H1b",
-      question: "Laid Off with Perm approval and 7th year Extension. (I140 not done)",
-      answer: "Don’t lose all hope. If you move to a new employer and they start the PERM process immediately then you might be able to at least get another 1-year extension. The new PERM would need to be filed by February 2026 to keep you safe. The basic rule is that you can get 1-year extensions if your PERM has been pending for 365 days. There is a sub part of the rule that says you can pre-file if the PERM was filed more than 365 days before you max out date. The sub part is used more than main rule. You can use the main part of the rule even if you are already using a 1-year extension.",
-      upvotes: 13,
-      url: "https://www.reddit.com/user/kellen-the-lawyer/"
-    },
-    {
-      topic: "H1b",
-      question: "USCIS Policy update on NTA issuance",
-      answer: "If you apply for an extension or change of employer and rely on the 240 day auto-extension and the H-1B is denied then you’ll get an NTA. The denial rate on extensions and change of employers is like 7%.",
-      upvotes: 13,
-      url: "https://www.reddit.com/user/kellen-the-lawyer/"
-    },
-    {
-      topic: "H1b",
-      question: "Who has successfully filed H1B with their own startup for themselves and gotten approval? Need guidance",
-      answer: "This has been possible since this summer, the regs codify a policy USCIS adopted this summer. I suspect they knew they were going to roll this out in the regs and decided to get it out as a policy manual update early. I got an H-1B approved for a carbon capture startup with just the founder and $15k in the bank over the summer. The LCA will establish your ability to pay which proves the employer-employee relationship. You should probably have two months of salary in your company’s bank account, and any investor statements of interest that you can get. Your approval will only be for 18 months. You need to have been counted against the cap in the past. This is totally doable if you follow the right steps.",
-      upvotes: 9,
-      url: "https://www.reddit.com/user/kellen-the-lawyer/"
-    },
-    {
-      topic: "H1b",
-      question: "Laid off with PERM approval pending.",
-      answer: "Just throwing this out there… you would be eligible for the AC21 1-year extension as long as your PERM has been pending for at least a year. Some of you want to yell at me now, give me a second. Even if the PERM was for company A and you are working for company B, company B can request the time you have left plus 1-year. This will also make your spouse eligible for an H4 EAD. The tough part is getting the proof from Company A that Company B can use to prove the PERM has been pending for a year.",
-      upvotes: 4,
-      url: "https://www.reddit.com/user/kellen-the-lawyer/"
-    },
-    {
-      topic: "H1b",
-      question: "Sponsoring H1B for your own company",
-      answer: "This subject keeps coming up, I’m going to have to make a video to explain the new rules. You can work for your own company on H-1B. You DO NOT NEED A BOARD anymore. There is no ownership percentage requirement. In the past the big problem with being an owner-H-1B holder was the ability to show an employer-employee relationship. USCIS wanted to see that multiple pieces of the test were met, did the company have the ability to hire, fire, pay, or otherwise supervise your work. USCIS updated their guidance on employer-employee relationship test over the summer to require only the ability to pay, then they included that same rule in the regs that started on 1/17/25. The LCA establishes the ability to pay because it is a binding contract between the company and the DOL to pay the wage. I still encourage my clients to have at least three months of salary in the company’s bank account. You need to be engaged in primarily “specialty occupation” work. Your first approval and first extension will only be for 18 months each. That’s the basics.",
-      upvotes: 43,
-      url: "https://www.reddit.com/user/kellen-the-lawyer/"
-    }
-  ];
-
-  const nextSlide = () => {
-    setCurrentIndex((prev) => (prev + 1) % comments.length);
-  };
-
-  const prevSlide = () => {
-    setCurrentIndex((prev) => (prev - 1 + comments.length) % comments.length);
-  };
-
+// One alternating feature row: copy on one side, mockup on the other.
+function Feature({ id, eyebrow, eyebrowColor, title, body, points, mock, flip }) {
   return (
-    <div className="relative">
-      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 md:p-10 transition-all duration-300 h-[500px] flex flex-col">
+    <section id={id} className="py-20 md:py-28 px-5">
+      <div className={`max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 lg:gap-16 items-center`}>
+        <Reveal className={flip ? 'lg:order-2' : ''}>
+          <div className={`text-[12px] font-mono uppercase tracking-[0.15em] ${eyebrowColor}`}>{eyebrow}</div>
+          <h2 className="font-serif text-3xl md:text-4xl text-fg mt-3 leading-tight">{title}</h2>
+          <p className="text-fg-2 leading-relaxed mt-5 text-[15px]">{body}</p>
+          <ul className="mt-6 space-y-3">
+            {points.map((p) => (
+              <li key={p} className="flex items-start gap-3 text-[14px] text-fg-2">
+                <Check size={17} className="text-amber mt-0.5 flex-shrink-0" />
+                {p}
+              </li>
+            ))}
+          </ul>
+        </Reveal>
+        <Reveal className={flip ? 'lg:order-1' : ''} delay={120}>
+          {mock}
+        </Reveal>
+      </div>
+    </section>
+  );
+}
 
-        {/* Card Header */}
-        <div className="flex-none flex items-center gap-4 mb-6">
-          <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs border border-slate-200">
-            u/kl
+const CAPABILITIES = [
+  { icon: Scale, c: 'text-amber', title: 'BALCA & AAO decisions', desc: 'Full-text search across thousands of administrative appeals with outcome filters and judge/panel lookup.' },
+  { icon: Network, c: 'text-brand-green', title: 'Citation graphs', desc: 'See how decisions cite each other in an interactive force-directed map, color-coded by outcome.' },
+  { icon: BookOpen, c: 'text-brand-blue', title: 'Regulations (CFR)', desc: 'The immigration CFR, cross-linked from the cases that interpret it.' },
+  { icon: Library, c: 'text-brand-blue', title: 'Policy manuals', desc: 'USCIS policy and precedent decisions, searchable alongside everything else.' },
+  { icon: BarChart3, c: 'text-brand-green', title: 'DOL dashboards', desc: 'PERM, LCA, and Prevailing Wage KPIs — cert rates, top firms, wage trends, SOC breakdowns.' },
+  { icon: Layers, c: 'text-amber', title: 'Pivot builder', desc: 'Build any custom report: drag fields, set filters, pivot by any dimension, export to CSV.' },
+  { icon: FileSearch, c: 'text-amber', title: 'PERM Comparer', desc: 'Drag in a PWD and experience letters; auto-extract fields and check requirement coverage.' },
+  { icon: CalendarRange, c: 'text-brand-rose', title: 'Visa Bulletin', desc: 'Track priority-date movement across categories and chargeability areas.' },
+  { icon: FolderKanban, c: 'text-brand-blue', title: 'Projects & Read Later', desc: 'Save cases into projects, drop notes, and stash citations while you read.' },
+];
+
+function CapabilityGrid() {
+  return (
+    <section id="everything" className="py-20 md:py-28 px-5 border-t border-line bg-ink-2/40">
+      <div className="max-w-6xl mx-auto">
+        <Reveal>
+          <div className="max-w-2xl">
+            <div className="text-[12px] font-mono uppercase tracking-[0.15em] text-amber">The whole workbench</div>
+            <h2 className="font-serif text-3xl md:text-4xl text-fg mt-3 leading-tight">
+              Everything an immigration practitioner reaches for — in one place.
+            </h2>
+            <p className="text-fg-2 leading-relaxed mt-5 text-[15px]">
+              Case law, statutes, policy, and government data stop living in a dozen browser tabs. Casebase keeps
+              them under a single search box, cross-linked and ready to cite.
+            </p>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-slate-900">u/kellen-the-lawyer</span>
-              <span className="text-xs text-slate-400">• 2h ago</span>
-            </div>
-            <div className="inline-block px-2 py-0.5 mt-1 rounded text-[10px] font-semibold bg-teal-50 text-teal-700 uppercase tracking-wide">
-              r/{comments[currentIndex].topic}
-            </div>
-          </div>
+        </Reveal>
+        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {CAPABILITIES.map((cap, i) => (
+            <Reveal key={cap.title} delay={(i % 3) * 90}>
+              <div className="h-full rounded-xl border border-line bg-ink-2 p-6 hover:border-line-2 hover:bg-ink-3 transition-colors group">
+                <div className="w-11 h-11 rounded-lg bg-ink-3 border border-line flex items-center justify-center mb-5 group-hover:scale-105 transition-transform">
+                  <cap.icon size={20} className={cap.c} />
+                </div>
+                <h3 className="text-fg font-semibold text-[15px] mb-2">{cap.title}</h3>
+                <p className="text-fg-3 text-[13px] leading-relaxed">{cap.desc}</p>
+              </div>
+            </Reveal>
+          ))}
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* Card Content */}
-        <div className="flex-1 overflow-y-auto min-h-0 pr-2">
-          <a href={comments[currentIndex].url} target="_blank" rel="noreferrer" className="block space-y-4 group">
-            <h3 className="text-lg font-bold text-slate-900 font-serif italic group-hover:text-teal-700 transition-colors">"{comments[currentIndex].question}"</h3>
-            <div className="pl-4 border-l-2 border-teal-500">
-              <p className="text-slate-600 leading-relaxed">
-                {comments[currentIndex].answer}
-              </p>
+function Founder() {
+  return (
+    <section className="py-20 md:py-24 px-5">
+      <div className="max-w-4xl mx-auto">
+        <Reveal>
+          <div className="rounded-2xl border border-line bg-gradient-to-br from-ink-2 to-ink-3 p-8 md:p-12">
+            <div className="flex flex-col md:flex-row gap-8 md:items-center">
+              <img
+                src="/images/Best_NoBackground_Headshot.png"
+                alt="Kellen Powell"
+                className="w-28 h-28 rounded-2xl object-cover bg-ink-4 border border-line flex-shrink-0 mx-auto md:mx-0"
+              />
+              <div>
+                <div className="text-[12px] font-mono uppercase tracking-[0.15em] text-amber">Built by a practitioner</div>
+                <h2 className="font-serif text-2xl md:text-3xl text-fg mt-3 leading-tight">
+                  Made by Kellen Powell, an immigration attorney.
+                </h2>
+                <p className="text-fg-2 leading-relaxed mt-4 text-[15px]">
+                  Casebase started as a tool I built for my own employment-based immigration practice — a faster way
+                  to research BALCA and AAO decisions and make sense of DOL outcome data. A decade of practice and ten
+                  years in the Army taught me to value tools that are direct, data-driven, and built for the actual work.
+                  Now it’s open for anyone to use.
+                </p>
+              </div>
             </div>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
+
+function CTA() {
+  return (
+    <section className="py-24 px-5 relative overflow-hidden">
+      <div className="absolute inset-0 grid-bg opacity-40" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[400px] bg-amber/10 rounded-full blur-[120px] animate-glow pointer-events-none" />
+      <Reveal>
+        <div className="relative max-w-3xl mx-auto text-center">
+          <Gavel size={32} className="text-amber mx-auto mb-6" />
+          <h2 className="font-serif text-4xl md:text-5xl text-fg leading-[1.08]">
+            Open Casebase and start searching.
+          </h2>
+          <p className="mt-5 text-lg text-fg-2 max-w-xl mx-auto">
+            It’s free to use right now — no account, no paywall. Just open it and run a query.
+          </p>
+          <a
+            href={CASEBASE_URL}
+            className="mt-9 inline-flex items-center gap-2 px-8 py-4 rounded-lg bg-amber text-ink font-semibold text-lg hover:bg-amber-2 transition-colors"
+          >
+            Open Casebase <ArrowRight size={20} />
+          </a>
+          <div className="mt-5 font-mono text-[13px] text-fg-3">casebase.kellenpowell.com</div>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
+function Footer() {
+  return (
+    <footer className="border-t border-line bg-ink-2/60 py-12 px-5">
+      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="text-center md:text-left">
+          <Logo />
+          <p className="text-fg-3 text-[13px] mt-3">
+            A research workbench for employment-based immigration.
+          </p>
+          <p className="text-fg-3 text-[12px] mt-1">
+            © {new Date().getFullYear()} Kellen Powell. All rights reserved.
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-center gap-6 text-[13px]">
+          <a href={CASEBASE_URL} className="text-fg-2 hover:text-amber transition-colors flex items-center gap-1.5">
+            <Database size={15} /> Open Casebase
+          </a>
+          <a href="https://www.linkedin.com/in/kellen-powell-immigration" target="_blank" rel="noreferrer" className="text-fg-3 hover:text-fg transition-colors">
+            LinkedIn
+          </a>
+          <a href="mailto:kellen@kellenpowell.com" className="text-fg-3 hover:text-fg transition-colors">
+            Contact
           </a>
         </div>
-
-        {/* Card Footer */}
-        <div className="flex-none flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-slate-500 text-sm font-medium bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
-              <ArrowUp size={16} className="text-orange-600" />
-              <span>{comments[currentIndex].upvotes}</span>
-            </div>
-            <a
-              href={comments[currentIndex].url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-semibold text-teal-600 hover:text-teal-700 flex items-center gap-1"
-            >
-              View Discussion <ArrowRight size={14} />
-            </a>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={prevSlide}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              <ArrowLeft size={20} />
-            </button>
-            <button
-              onClick={nextSlide}
-              className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-colors"
-            >
-              <ArrowRight size={20} />
-            </button>
-          </div>
-        </div>
-
       </div>
+    </footer>
+  );
+}
 
-      {/* Decorative Elements */}
-      <div className="absolute top-1/2 -left-4 md:-left-12 -translate-y-1/2">
-        <button onClick={prevSlide} className="hidden md:flex p-3 rounded-full bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-teal-600 hover:border-teal-200 transition-all">
-          <ArrowLeft size={24} />
-        </button>
-      </div>
-      <div className="absolute top-1/2 -right-4 md:-right-12 -translate-y-1/2">
-        <button onClick={nextSlide} className="hidden md:flex p-3 rounded-full bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-teal-600 hover:border-teal-200 transition-all">
-          <ArrowRight size={24} />
-        </button>
-      </div>
+/* ─────────────────────────────────────────────────────────────────────────
+   App
+   ───────────────────────────────────────────────────────────────────────── */
+
+function App() {
+  return (
+    <div className="min-h-screen bg-ink text-fg">
+      <Nav />
+      <Hero />
+      <StatsBand />
+
+      <Feature
+        id="research"
+        eyebrow="Cross-corpus search"
+        eyebrowColor="text-brand-rose"
+        title="One query across every source that matters."
+        body="Type once and search BALCA decisions, AAO decisions, the CFR, and USCIS policy at the same time. Results are ranked by relevance and citation authority, with full operator support for exact phrases, exclusions, and OR."
+        points={[
+          'BALCA & AAO full-text search with outcome filters',
+          'Inline citation hyperlinks jump straight to the cited case',
+          'Operators: "exact phrase", -exclude, term OR term',
+        ]}
+        mock={<SearchMock />}
+      />
+
+      <Feature
+        id="citations"
+        eyebrow="Citation graph"
+        eyebrowColor="text-brand-green"
+        title="See how the case law connects."
+        body="Every decision sits in a web of citations. Casebase draws that web as an interactive graph so you can spot the authorities that anchor a line of reasoning — sized by influence, colored by outcome."
+        points={[
+          'Force-directed graph of citing and cited decisions',
+          'Nodes colored by outcome: affirmed, reversed, remanded',
+          'Click any node to open the full decision',
+        ]}
+        mock={<CitationGraphMock />}
+        flip
+      />
+
+      <Feature
+        id="data"
+        eyebrow="DOL performance data"
+        eyebrowColor="text-brand-green"
+        title="1.4M+ records of what actually happened."
+        body="Go beyond the opinions. Explore PERM, LCA, and Prevailing Wage disclosure data from FY2020–FY2026 with live dashboards, 21 pre-built report templates, and a pivot builder for anything custom."
+        points={[
+          'KPI dashboards: cert rates, top firms, wage trends, SOC drift',
+          '21 template reports across outcomes and cross-program trends',
+          'Pivot builder with CSV export for your own cuts',
+        ]}
+        mock={<DashboardMock />}
+      />
+
+      <Feature
+        id="tools"
+        eyebrow="PERM Comparer"
+        eyebrowColor="text-amber"
+        title="Check experience against the PWD in seconds."
+        body="Drag in a Prevailing Wage Determination and your experience verification letters. Casebase extracts the fields, computes total months, and checks each requirement keyword against the letters — flagging what’s covered and what’s missing."
+        points={[
+          'Auto-extract fields from ETA-9141 PWDs and experience letters',
+          'Requirement keyword coverage, found vs. missing',
+          'Equal-pay-transparency checks by jurisdiction',
+        ]}
+        mock={<ComparerMock />}
+        flip
+      />
+
+      <CapabilityGrid />
+      <Founder />
+      <CTA />
+      <Footer />
     </div>
-  );
-}
-
-function Card({ icon, title, desc }) {
-  return (
-    <div className="p-8 rounded-xl bg-white border border-slate-200 shadow-sm hover:shadow-md hover:border-teal-100 transition-all group">
-      <div className="w-12 h-12 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 group-hover:text-teal-700 group-hover:bg-teal-50 transition-all mb-6">
-        {icon}
-      </div>
-      <h3 className="text-xl font-bold text-slate-900 mb-3">{title}</h3>
-      <p className="text-slate-600 leading-relaxed text-sm">
-        {desc}
-      </p>
-    </div>
-  );
-}
-
-function SocialLink({ href, icon, label }) {
-  return (
-    <a
-      href={href}
-      className="text-slate-400 hover:text-slate-900 transition-colors"
-      aria-label={label}
-      target="_blank"
-      rel="noreferrer"
-    >
-      {icon}
-    </a>
-  );
-}
-
-function RedditIcon({ size = 24, className = "" }) {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className={className}
-    >
-      <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" />
-    </svg>
   );
 }
 

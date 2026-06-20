@@ -33,7 +33,6 @@ const DWELL = 3.2, SCOUT = 0.9;
 // (gone) → SHOOT in to the new spot. SPREAD staggers when each beam's turn
 // starts, so they migrate one-by-one while the rest hold on the old spot.
 const FADE = 0.15, GAP = 0.16, SHOOT = 0.34, SPREAD = 0.4;
-const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 const lerp = (a, b, t) => a + (b - a) * t;
 
@@ -129,7 +128,7 @@ export default function FlowCanvas({ mode, fixedConvergence }) {
         });
         const pulseF = 0.7 + 0.3 * Math.sin(now / 380);
         dot(c.x, c.y, 3.5 + pulseF * 1.5, additive ? 0.95 : 0.8, 16);
-        raf = requestAnimationFrame(frame);
+        schedule();
         return;
       }
 
@@ -202,10 +201,29 @@ export default function FlowCanvas({ mode, fixedConvergence }) {
         dot(l.x, l.y, 2, 1, 6);
       }
 
-      raf = requestAnimationFrame(frame);
+      schedule();
     };
 
-    let raf;
+    // The beam field is purely decorative, so don't burn CPU/GPU on it when it
+    // can't be seen: pause the rAF loop while the hero is scrolled out of view
+    // or the tab is backgrounded, and resume seamlessly when it returns.
+    let raf = null;
+    let onScreen = true;          // intersecting the viewport
+    let tabVisible = !document.hidden;
+    let io = null;
+    const schedule = () => {
+      raf = onScreen && tabVisible ? requestAnimationFrame(frame) : null;
+    };
+    const sync = () => {
+      if (onScreen && tabVisible) {
+        if (raf == null) { last = performance.now(); raf = requestAnimationFrame(frame); }
+      } else if (raf != null) {
+        cancelAnimationFrame(raf);
+        raf = null;
+      }
+    };
+    const onVisChange = () => { tabVisible = !document.hidden; sync(); };
+
     if (reduce) {
       // static single frame at the convergence (fixed spot, or first roam spot)
       const conv = px(fixed || from);
@@ -215,10 +233,18 @@ export default function FlowCanvas({ mode, fixedConvergence }) {
       ANCHORS.forEach((af) => { const a = px(af); ctx.lineWidth = 1.1; drawBeam(a, conv, additive ? 0.5 : 0.34); });
       dot(conv.x, conv.y, 5, additive ? 0.95 : 0.8, 16);
     } else {
-      raf = requestAnimationFrame(frame);
+      io = new IntersectionObserver(([e]) => { onScreen = e.isIntersecting; sync(); });
+      io.observe(wrap);
+      document.addEventListener('visibilitychange', onVisChange);
+      raf = requestAnimationFrame(frame); // kick off; observers pause it if needed
     }
 
-    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+    return () => {
+      if (raf != null) cancelAnimationFrame(raf);
+      if (io) io.disconnect();
+      document.removeEventListener('visibilitychange', onVisChange);
+      ro.disconnect();
+    };
   }, [mode, fixedConvergence]);
 
   return (

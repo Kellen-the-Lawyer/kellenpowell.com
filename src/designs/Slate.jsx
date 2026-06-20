@@ -48,6 +48,34 @@ function Reveal({ children, className = '', delay = 0 }) {
   );
 }
 
+// The small accent-colored kicker above every section heading.
+function Eyebrow({ children, className = '' }) {
+  return (
+    <div className={`text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)] ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+// A section that pairs a heading column with a product mockup beneath it.
+// Used by every feature whose visual is a custom interactive card.
+function MockSection({ id, eyebrow, title, body, padY = 'py-14 md:py-20', children }) {
+  return (
+    <section id={id} className={`px-5 md:px-8 ${padY}`}>
+      <div className="max-w-6xl mx-auto">
+        <Reveal>
+          <div className="max-w-2xl mb-8">
+            <Eyebrow>{eyebrow}</Eyebrow>
+            <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">{title}</h2>
+            <p className="font-inter text-[1rem] leading-relaxed text-[var(--fg2)] mt-4">{body}</p>
+          </div>
+        </Reveal>
+        <Reveal delay={120}>{children}</Reveal>
+      </div>
+    </section>
+  );
+}
+
 function Logo() {
   return (
     <span className="flex items-center gap-2 select-none">
@@ -66,7 +94,7 @@ function Nav({ ThemeToggle }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
-    window.addEventListener('scroll', onScroll);
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -132,9 +160,7 @@ function Feature({ f, index }) {
     <section id={f.id} className="px-5 md:px-8 py-14 md:py-20">
       <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
         <Reveal className={flip ? 'lg:order-2' : ''}>
-          <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)] mb-4">
-            {f.eyebrow}
-          </div>
+          <Eyebrow className="mb-4">{f.eyebrow}</Eyebrow>
           <h2 className="font-sora text-[1.8rem] md:text-[2.3rem] leading-[1.1] font-semibold tracking-tight text-[var(--fg)]">{f.title}</h2>
           <p className="font-inter text-[1.02rem] leading-relaxed text-[var(--fg2)] mt-4">{f.body}</p>
           <ul className="mt-6 space-y-3">
@@ -160,7 +186,7 @@ function CapabilityGrid() {
       <div className="max-w-6xl mx-auto">
         <Reveal>
           <div className="max-w-2xl">
-            <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">The whole workbench</div>
+            <Eyebrow>The whole workbench</Eyebrow>
             <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">
               Everything a practitioner reaches for, in one place.
             </h2>
@@ -221,107 +247,48 @@ function Footer() {
   );
 }
 
-function CitationGraphSection() {
-  const f = FEATURES.find((x) => x.id === 'citations');
-  const Graph = MOCKS.graph;
-  return (
-    <section id="citations" className="px-5 md:px-8 py-14 md:py-20">
-      <div className="max-w-6xl mx-auto">
-        <Reveal>
-          <div className="max-w-2xl mb-8">
-            <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">{f.eyebrow}</div>
-            <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">{f.title}</h2>
-            <p className="font-inter text-[1rem] leading-relaxed text-[var(--fg2)] mt-4">{f.body}</p>
-          </div>
-        </Reveal>
-        <Reveal delay={120}><Graph /></Reveal>
-      </div>
-    </section>
-  );
-}
-
-function DolDashboardSection() {
-  const f = FEATURES.find((x) => x.id === 'data');
-  return (
-    <section id="data" className="px-5 md:px-8 py-14 md:py-20">
-      <div className="max-w-6xl mx-auto">
-        <Reveal>
-          <div className="max-w-2xl mb-8">
-            <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">{f.eyebrow}</div>
-            <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">{f.title}</h2>
-            <p className="font-inter text-[1rem] leading-relaxed text-[var(--fg2)] mt-4">{f.body}</p>
-          </div>
-        </Reveal>
-        <Reveal delay={120}><DolDashboardCard /></Reveal>
-      </div>
-    </section>
-  );
-}
-
-function PermComparerSection() {
-  const f = FEATURES.find((x) => x.id === 'tools');
-  return (
-    <section id="tools" className="px-5 md:px-8 py-14 md:py-20">
-      <div className="max-w-6xl mx-auto">
-        <Reveal>
-          <div className="max-w-2xl mb-8">
-            <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">{f.eyebrow}</div>
-            <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">{f.title}</h2>
-            <p className="font-inter text-[1rem] leading-relaxed text-[var(--fg2)] mt-4">{f.body}</p>
-          </div>
-        </Reveal>
-        <Reveal delay={120}><PermComparerMock /></Reveal>
-      </div>
-    </section>
-  );
-}
-
-function VisaBulletinSection() {
-  return (
-    <section id="visa-bulletin" className="px-5 md:px-8 py-12 md:py-16">
-      <div className="max-w-6xl mx-auto">
-        <Reveal>
-          <div className="max-w-2xl mb-8">
-            <div className="text-[11px] font-inter font-semibold uppercase tracking-[0.18em] text-[var(--accent)]">Visa Bulletin</div>
-            <h2 className="font-sora text-[1.9rem] md:text-[2.4rem] leading-tight font-semibold tracking-tight text-[var(--fg)] mt-3">
-              Track priority-date movement across every category.
-            </h2>
-            <p className="font-inter text-[1rem] leading-relaxed text-[var(--fg2)] mt-4">
-              Ten years of bulletins in one workbench — final action and dates for filing, employment and family, every
-              chargeability area. Pick a preference and country to see the cut-off, backlog, and month-by-month movement.
-            </p>
-          </div>
-        </Reveal>
-        <Reveal delay={120}><VisaBulletinCard /></Reveal>
-      </div>
-    </section>
-  );
-}
+// Features keyed by id. The on-page order below differs from the data order,
+// so the layout looks each feature up by name rather than mapping the array.
+const FEATURE = Object.fromEntries(FEATURES.map((f) => [f.id, f]));
+const heading = (f) => ({ eyebrow: f.eyebrow, title: f.title, body: f.body });
 
 export default function Slate({ mode, ThemeToggle, palettes = PALETTES }) {
+  const Graph = MOCKS.graph;
   return (
     <div className="font-inter min-h-screen" style={{ ...palettes[mode], background: 'var(--bg)', color: 'var(--fg)' }}>
       <Nav ThemeToggle={ThemeToggle} />
       <HeroFlow mode={mode} />
       <StatsBand />
-      {FEATURES.flatMap((f, i) => {
-        if (f.id === 'citations') {
-          return [<CitationGraphSection key="citations" />, <VisaBulletinSection key="visa-bulletin" />];
-        }
-        if (f.id === 'data') return []; // moved below the PERM Comparer
-        if (f.id === 'tools') return [<PermComparerSection key="tools" />, <DolDashboardSection key="data" />];
-        return [<Feature key={f.id} f={f} index={i} />];
-      })}
+
+      {/* Cross-corpus search — the one standard alternating feature row. */}
+      <Feature f={FEATURE.research} index={0} />
+
+      {/* The remaining features each pair a heading with a custom card. */}
+      <MockSection {...heading(FEATURE.citations)} id="citations">
+        <Graph />
+      </MockSection>
+
+      <MockSection
+        id="visa-bulletin"
+        padY="py-12 md:py-16"
+        eyebrow="Visa Bulletin"
+        title="Track priority-date movement across every category."
+        body="Ten years of bulletins in one workbench — final action and dates for filing, employment and family, every chargeability area. Pick a preference and country to see the cut-off, backlog, and month-by-month movement."
+      >
+        <VisaBulletinCard />
+      </MockSection>
+
+      <MockSection {...heading(FEATURE.tools)} id="tools">
+        <PermComparerMock />
+      </MockSection>
+
+      <MockSection {...heading(FEATURE.data)} id="data">
+        <DolDashboardCard />
+      </MockSection>
+
       <CapabilityGrid />
       <CTASection />
       <Footer />
     </div>
   );
 }
-
-export const META = {
-  key: 'slate',
-  name: 'Slate',
-  blurb: 'Minimal modern-corporate — cool slate grays, hairline borders, teal accent, Sora + Inter',
-  swatch: { light: '#0d9488', dark: '#2dd4bf' },
-};

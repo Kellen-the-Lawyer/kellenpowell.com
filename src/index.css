@@ -1,21 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Sora:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&display=swap');
+/* Fonts are loaded via <link> in index.html — preconnected and ahead of this
+   stylesheet, rather than a render-blocking CSS @import. Only the families the
+   page actually renders are requested: Inter (body), Sora (headings), DM Mono,
+   DM Serif Display, and DM Sans (the --font-sans default). */
 @import "tailwindcss";
 
 @theme {
-  --font-sans:    "DM Sans", system-ui, sans-serif;
-  --font-serif:   "DM Serif Display", Georgia, serif;
-  --font-mono:    "DM Mono", ui-monospace, monospace;
-  --font-fraunces: "Fraunces", Georgia, serif;
-  --font-newsreader: "Newsreader", Georgia, serif;
-  --font-inter:   "Inter", system-ui, sans-serif;
-  --font-space:   "Space Grotesk", system-ui, sans-serif;
-  --font-sora:    "Sora", system-ui, sans-serif;
-  --font-jetbrains: "JetBrains Mono", ui-monospace, monospace;
-  --font-plex:    "IBM Plex Mono", ui-monospace, monospace;
-  --font-jakarta: "Plus Jakarta Sans", system-ui, sans-serif;
-  --font-manrope: "Manrope", system-ui, sans-serif;
-  --font-bricolage: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans:  "DM Sans", system-ui, sans-serif;
+  --font-serif: "DM Serif Display", Georgia, serif;
+  --font-mono:  "DM Mono", ui-monospace, monospace;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-sora:  "Sora", system-ui, sans-serif;
 }
 
 @layer base {

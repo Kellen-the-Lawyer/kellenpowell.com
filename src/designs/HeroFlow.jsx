@@ -5,15 +5,14 @@ import FlowCanvas from './FlowCanvas';
 
 /* ════════════════════════════════════════════════════════════════════
    Immersive "Flow" hero — visualizes the tagline: streams of case data
-   converge into a single glowing search box. The background engine is
-   pluggable (`Background`): FlowCanvas roams (moving), StaticFlowCanvas
-   pins the convergence under the "E" (static). Both share the same beams.
+   converge into a single glowing search box, drawn by FlowCanvas behind
+   the copy.
    ════════════════════════════════════════════════════════════════════ */
 
-export default function HeroFlow({ Background = FlowCanvas, mode }) {
+export default function HeroFlow({ mode }) {
   return (
     <header id="top" className="relative overflow-hidden px-5 md:px-8 min-h-[90vh] flex items-center justify-center">
-      <Background mode={mode} />
+      <FlowCanvas mode={mode} />
       <div className="relative z-10 w-full max-w-4xl mx-auto text-center py-24">
         <div className="inline-flex items-center gap-2 text-[12px] font-inter font-medium px-3 py-1 rounded-full border border-[var(--line)] bg-[var(--bg2)]/70 backdrop-blur text-[var(--fg2)] mb-7">
           <Sparkles size={13} className="text-[var(--accent)]" />

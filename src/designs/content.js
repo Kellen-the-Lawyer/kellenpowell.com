@@ -95,13 +95,6 @@ export const NAV_LINKS = [
   ['Everything', '#everything'],
 ];
 
-export const FOUNDER = {
-  eyebrow: 'Built by a practitioner',
-  title: 'Made by Kellen Powell, an immigration attorney.',
-  body: 'Casebase started as a tool I built for my own employment-based immigration practice — a faster way to research BALCA and AAO decisions and make sense of DOL outcome data. A decade of practice and ten years in the Army taught me to value tools that are direct, data-driven, and built for the actual work. Now it’s open for anyone to use.',
-  image: '/images/Best_NoBackground_Headshot.png',
-};
-
 export const CTA = {
   title: 'Open Casebase and start searching.',
   body: 'It’s free to use right now — no account, no paywall. Just open it and run a query.',
@@ -109,20 +102,10 @@ export const CTA = {
   url: 'casebase.kellenpowell.com',
 };
 
-// Mock data reused by the product screenshots.
+// Mock data for the SearchMock product screenshot.
 export const SEARCH_RESULTS = [
   { num: '2023-PER-00148', corpus: 'BALCA', title: 'Specialty occupation degree requirement', outcome: 'Affirmed' },
   { num: 'JAN032024_01B5203', corpus: 'AAO', title: 'EB-1A extraordinary ability — final merits', outcome: 'Reversed' },
   { num: '20 CFR § 656.17', corpus: 'CFR', title: 'Recruitment & filing requirements', outcome: null },
   { num: '2022-PER-00091', corpus: 'BALCA', title: 'Business necessity for foreign language', outcome: 'Remanded' },
 ];
-
-export const REQS = [
-  { kw: 'Master’s degree', ok: true },
-  { kw: 'Python', ok: true },
-  { kw: 'Machine learning', ok: true },
-  { kw: 'Apache Spark', ok: false },
-  { kw: '36 months exp.', ok: true },
-];
-
-export const BARS = [42, 61, 55, 78, 70, 88, 95];
